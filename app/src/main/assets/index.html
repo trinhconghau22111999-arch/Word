@@ -580,9 +580,7 @@
     </div>
     <div class="doc-title">Document1 - Word</div>
     <div class="win-controls">
-      <span title="Thu nhỏ">&#8211;</span>
-      <span title="Phóng to">&#9633;</span>
-      <span title="Đóng">&#10005;</span>
+      <span id="btnHomeAndroid" title="Về màn hình chính Android">&#10005;</span>
     </div>
   </div>
 
@@ -1753,48 +1751,17 @@ Tran Thi B,Cong ty XYZ,b@example.com"></textarea>
 <div class="backstage" id="backstage" hidden>
   <div class="backstage-sidebar">
     <div class="bs-back" id="bsClose"><i class="fa-solid fa-arrow-left"></i> Quay lại</div>
-    <div class="bs-item active" data-pane="info">Info (Thông tin)</div>
-    <div class="bs-item" data-pane="new">New (Tạo mới)</div>
+    <div class="bs-item active" data-pane="new">New (Tạo mới)</div>
     <div class="bs-item" data-pane="open">Open (Mở file)</div>
     <div class="bs-item" data-pane="save">Save / Save As</div>
     <div class="bs-item" data-pane="print">Print (In)</div>
     <div class="bs-item" data-pane="share">Share (Chia sẻ)</div>
-    <div class="bs-item" data-pane="export">Export (Xuất file)</div>
     <div class="bs-item" data-pane="closeDoc">Close (Đóng)</div>
-    <div class="bs-item" data-pane="account">Account (Tài khoản)</div>
     <div class="bs-item" data-pane="options">Options (Tùy chọn)</div>
   </div>
   <div class="backstage-content">
 
-    <div class="bs-pane" data-pane="info">
-      <h2>Thông tin tài liệu</h2>
-      <div style="display:flex; gap:40px;">
-        <div style="flex:1;">
-          <div class="bs-section">
-            <h3>Bảo vệ tài liệu</h3>
-            <div class="bs-btn" id="bsProtectFinal"><i class="fa-solid fa-lock"></i> Đánh dấu là bản cuối</div>
-            <div class="bs-btn" id="bsProtectPassword"><i class="fa-solid fa-key"></i> Mã hóa bằng mật khẩu</div>
-          </div>
-          <div class="bs-section">
-            <h3>Kiểm tra tài liệu</h3>
-            <div class="bs-btn" id="bsInspectDoc"><i class="fa-solid fa-magnifying-glass"></i> Kiểm tra vấn đề (comment, watermark ẩn...)</div>
-          </div>
-        </div>
-        <div style="width:220px; font-size:12px; color:#444;">
-          <h3 style="font-size:12px; color:#666; text-transform:uppercase;">Thuộc tính</h3>
-          <table class="wc-table">
-            <tr><td>Kích thước</td><td id="infoSize">—</td></tr>
-            <tr><td>Số trang</td><td id="infoPages">—</td></tr>
-            <tr><td>Số từ</td><td id="infoWords">—</td></tr>
-            <tr><td>Tiêu đề</td><td><input type="text" id="infoTitleInput" placeholder="Chưa đặt" style="width:100%; border:1px solid #ccc; font-size:12px; padding:2px 4px;"></td></tr>
-            <tr><td>Tác giả</td><td><input type="text" id="infoAuthorInput" placeholder="Chưa đặt" style="width:100%; border:1px solid #ccc; font-size:12px; padding:2px 4px;"></td></tr>
-            <tr><td>Lần sửa cuối</td><td id="infoModified">—</td></tr>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="bs-pane" data-pane="new" hidden>
+    <div class="bs-pane" data-pane="new">
       <h2>Tạo tài liệu mới</h2>
       <div class="bs-section">
         <div class="bs-btn" id="bsNewBlank"><i class="fa-regular fa-file"></i> Tài liệu trống</div>
@@ -1832,20 +1799,13 @@ Tran Thi B,Cong ty XYZ,b@example.com"></textarea>
       <p style="color:#888;">Trình duyệt sẽ mở hộp thoại in — chọn "Lưu dưới dạng PDF" (Save as PDF) làm máy in để xuất file PDF.</p>
     </div>
 
-    <div class="bs-pane" data-pane="export" hidden>
-      <h2>Xuất file</h2>
-      <div class="bs-section">
-        <div class="bs-btn" id="bsExportPdf"><i class="fa-regular fa-file-pdf" style="color:#c00;"></i> Tạo PDF/XPS</div>
-        <div class="bs-btn" id="bsExportDoc"><i class="fa-solid fa-file-word" style="color:#2b579a;"></i> Xuất Word (.docx)</div>
-      </div>
-    </div>
-
     <div class="bs-pane" data-pane="share" hidden>
       <h2>Chia sẻ</h2>
       <div class="bs-section">
-        <p style="color:#666; max-width:420px;">Ứng dụng chạy hoàn toàn trên trình duyệt (không có máy chủ lưu trữ đám mây), nên không thể tạo liên kết chia sẻ trực tiếp như OneDrive. Thay vào đó, hãy xuất file rồi gửi qua email/Zalo/Drive:</p>
-        <div class="bs-btn" id="bsShareEmail"><i class="fa-regular fa-envelope"></i> Gửi qua Email (đính kèm .doc)</div>
-        <div class="bs-btn" id="bsShareExportFirst"><i class="fa-solid fa-file-export"></i> Xuất file để chia sẻ thủ công</div>
+        <p style="color:#666; max-width:420px;">Gửi tài liệu hiện tại dưới dạng file Word (.docx) qua:</p>
+        <div class="bs-btn" id="bsShareGmail"><i class="fa-solid fa-envelope" style="color:#d93025;"></i> Gmail</div>
+        <div class="bs-btn" id="bsShareDrive"><i class="fa-brands fa-google-drive" style="color:#1a73e8;"></i> Google Drive</div>
+        <div class="bs-btn" id="bsShareZalo"><i class="fa-solid fa-comment-dots" style="color:#0068ff;"></i> Zalo</div>
       </div>
     </div>
 
@@ -1855,14 +1815,6 @@ Tran Thi B,Cong ty XYZ,b@example.com"></textarea>
         <div class="bs-btn" id="bsCloseDoc"><i class="fa-solid fa-xmark"></i> Đóng tài liệu hiện tại</div>
       </div>
       <p style="color:#888;">Nội dung đã autosave sẽ được giữ lại — mở lại app này lần sau nội dung vẫn còn.</p>
-    </div>
-
-    <div class="bs-pane" data-pane="account" hidden>
-      <h2>Tài khoản</h2>
-      <div class="bs-section">
-        <h3>Thông tin sản phẩm</h3>
-        <p style="color:#444;">Word Clone (Web) — bản mô phỏng giao diện &amp; chức năng Word 2016, chạy hoàn toàn trên trình duyệt.<br>Không có tài khoản Microsoft/đăng nhập — mọi dữ liệu lưu cục bộ trong trình duyệt của bạn.</p>
-      </div>
     </div>
 
     <div class="bs-pane" data-pane="options" hidden>
@@ -3458,7 +3410,7 @@ document.getElementById('btnCompare').addEventListener('click', () => {
 
 /* ---------- Restrict Editing (alias sang Mark as Final ở Backstage Info) ---------- */
 document.getElementById('btnRestrictEditing').addEventListener('click', () => {
-  document.getElementById('bsProtectFinal').click();
+  toggleMarkFinal();
 });
 
 /* ---------- Find & Replace ---------- */
@@ -3566,7 +3518,7 @@ document.addEventListener('keydown', (e) => {
 
 /* ================= GIAI ĐOẠN 5: TAB FILE (BACKSTAGE) ================= */
 const backstage = document.getElementById('backstage');
-function openBackstage() { backstage.hidden = false; refreshInfoPane(); }
+function openBackstage() { backstage.hidden = false; }
 function closeBackstage() { backstage.hidden = true; }
 document.getElementById('bsClose').addEventListener('click', closeBackstage);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !backstage.hidden) closeBackstage(); });
@@ -3912,7 +3864,7 @@ function updateSaveStatusUI() {
 
 /* Lưu vào 1 định dạng cụ thể. forcePicker=true nghĩa là "Save As": luôn hỏi vị trí/tên mới. */
 async function performSave(formatKey, forcePicker) {
-  if (formatKey === 'pdf') { doPrint(); savedFileFormat = 'pdf'; return; }
+  if (formatKey === 'pdf') { savePdfFile(); return; }
   const fmt = SAVE_FORMATS[formatKey];
   if (!fmt) return;
   const raw = await fmt.build(); // Blob (docx) hoặc string (html/txt)
@@ -3967,38 +3919,19 @@ async function quickSaveDefault() {
   await performSave(savedFileFormat || 'docx', false);
 }
 document.getElementById('bsSaveDoc').addEventListener('click', async () => { await performSave('docx', true); closeBackstage(); });
-document.getElementById('bsSavePdf').addEventListener('click', () => { doPrint(); savedFileFormat = 'pdf'; closeBackstage(); });
+document.getElementById('bsSavePdf').addEventListener('click', () => { savePdfFile(); });
 document.getElementById('bsSaveHtml').addEventListener('click', async () => { await performSave('html', true); closeBackstage(); });
 document.getElementById('bsSaveTxt').addEventListener('click', async () => { await performSave('txt', true); closeBackstage(); });
-document.getElementById('bsExportDoc').addEventListener('click', async () => { await performSave('docx', true); closeBackstage(); });
 document.querySelector('.bs-item[data-pane="save"]').addEventListener('click', updateSaveStatusUI);
 
 /* ================= BACKSTAGE BỔ SUNG: INFO / SHARE / CLOSE / ACCOUNT / OPTIONS ================= */
 
-/* ---------- Info ---------- */
+/* ---------- Mark as Final (dùng ở Review > Restrict Editing) ---------- */
 let docTitleMeta = '';
 let docAuthorMeta = '';
 let docCreatedAt = new Date().toISOString();
 let docMarkedFinal = false;
-
-function refreshInfoPane() {
-  const htmlLen = doc.innerHTML.length + document.getElementById('pageHeader').innerHTML.length + document.getElementById('pageFooter').innerHTML.length;
-  document.getElementById('infoSize').textContent = (htmlLen / 1024).toFixed(1) + ' KB';
-  document.getElementById('infoPages').textContent = document.getElementById('pageInfo').textContent.split('/')[1] || '1';
-  const text = (doc.innerText || doc.textContent || '').trim();
-  document.getElementById('infoWords').textContent = text.length ? text.split(/\s+/).length : 0;
-  document.getElementById('infoTitleInput').value = docTitleMeta;
-  document.getElementById('infoAuthorInput').value = docAuthorMeta;
-  document.getElementById('infoModified').textContent = new Date().toLocaleString('vi-VN');
-}
-document.getElementById('infoTitleInput').addEventListener('input', (e) => {
-  docTitleMeta = e.target.value;
-  document.querySelector('.doc-title').textContent = (docTitleMeta || 'Document1') + ' - Word';
-  scheduleSave();
-});
-document.getElementById('infoAuthorInput').addEventListener('input', (e) => { docAuthorMeta = e.target.value; scheduleSave(); });
-
-document.getElementById('bsProtectFinal').addEventListener('click', () => {
+function toggleMarkFinal() {
   docMarkedFinal = !docMarkedFinal;
   doc.contentEditable = docMarkedFinal ? 'false' : 'true';
   document.getElementById('pageHeader').contentEditable = docMarkedFinal ? 'false' : 'true';
@@ -4007,32 +3940,28 @@ document.getElementById('bsProtectFinal').addEventListener('click', () => {
     ? 'Đã đánh dấu tài liệu là bản cuối. Tài liệu tạm thời chỉ đọc — bấm lại nút này để chỉnh sửa tiếp.'
     : 'Đã bỏ đánh dấu bản cuối. Có thể chỉnh sửa lại bình thường.');
   scheduleSave();
-});
-document.getElementById('bsProtectPassword').addEventListener('click', () => {
-  const pw = prompt('Đặt mật khẩu bảo vệ tài liệu (chỉ mô phỏng giao diện, không thực sự mã hóa file):');
-  if (pw) alert('Đã "đặt" mật khẩu (mô phỏng). Lưu ý: đây là bản demo trên web, không thay thế mã hóa thật của Word.');
-});
-document.getElementById('bsInspectDoc').addEventListener('click', () => {
-  const commentCount = doc.querySelectorAll('.comment-mark').length;
-  const watermarkCount = document.querySelectorAll('.watermark-el').length;
-  const hasHeaderFooter = document.getElementById('pageHeader').classList.contains('shown') || document.getElementById('pageFooter').classList.contains('shown');
-  let msg = 'Kết quả kiểm tra tài liệu:\n';
-  msg += '- Ghi chú (comment) ẩn: ' + commentCount + (commentCount ? ' (có thể chứa thông tin không muốn chia sẻ)' : ' — không có');
-  msg += '\n- Watermark: ' + (watermarkCount ? 'có' : 'không có');
-  msg += '\n- Header/Footer: ' + (hasHeaderFooter ? 'có nội dung' : 'không có');
-  alert(msg);
-});
+}
 
-/* ---------- Share ---------- */
-document.getElementById('bsShareEmail').addEventListener('click', () => {
-  saveAsWord();
-  const subject = encodeURIComponent((docTitleMeta || 'Document1') + '.doc');
-  const body = encodeURIComponent('Gửi kèm file tài liệu vừa tải xuống (' + (docTitleMeta || 'Document1') + '.doc). Vui lòng đính kèm file từ thư mục Downloads.');
-  window.open('mailto:?subject=' + subject + '&body=' + body, '_blank');
-});
-document.getElementById('bsShareExportFirst').addEventListener('click', () => {
-  document.querySelector('.bs-item[data-pane="save"]').click();
-});
+/* ---------- Share: gửi file Word qua Gmail / Drive / Zalo ---------- */
+async function shareDocx(target) {
+  if (!(window.AndroidBridge && AndroidBridge.shareFile)) {
+    alert('Chức năng chia sẻ chỉ hoạt động trong ứng dụng Android.');
+    return;
+  }
+  const blob = await generateDocxBlob();
+  const base = savedFileName ? savedFileName.replace(/\.[^.]+$/, '') : (docTitleMeta || 'Document1');
+  const name = base + '.docx';
+  const fr = new FileReader();
+  fr.onloadend = () => {
+    const d = String(fr.result);
+    AndroidBridge.shareFile(name, SAVE_FORMATS.docx.mime, d.substring(d.indexOf(',') + 1), target);
+  };
+  fr.readAsDataURL(blob);
+  closeBackstage();
+}
+document.getElementById('bsShareGmail').addEventListener('click', () => shareDocx('gmail'));
+document.getElementById('bsShareDrive').addEventListener('click', () => shareDocx('drive'));
+document.getElementById('bsShareZalo').addEventListener('click', () => shareDocx('zalo'));
 
 /* ---------- Close ---------- */
 document.getElementById('bsCloseDoc').addEventListener('click', async () => {
@@ -4059,8 +3988,7 @@ document.getElementById('optSpellcheckToggle').addEventListener('change', (e) =>
 });
 
 /* ---- Print / Export PDF ---- */
-function doPrint() {
-  closeBackstage();
+function applyPrintPageStyle() {
   // Chèn @page động khớp khổ giấy & hướng trang đang chọn ở tab Layout
   let styleTag = document.getElementById('dynamicPrintStyle');
   if (!styleTag) {
@@ -4070,11 +3998,28 @@ function doPrint() {
   }
   const sizeNameMap = { A4: 'A4', Letter: 'letter', Legal: 'legal' };
   const cssSize = sizeNameMap[pageState.size] || 'A4';
-  styleTag.textContent = '@page { size: ' + cssSize + ' ' + pageState.orientation + '; margin: 0; }';
+  styleTag.textContent = '@page { size: ' + cssSize + ' ' + pageState.orientation + '; margin: 0; } @media print { .zoom-container { transform: none !important; } }';
+}
+function doPrint() {
+  closeBackstage();
+  applyPrintPageStyle();
   setTimeout(() => window.print(), 150);
 }
+/* Lưu PDF thật (không qua hộp thoại in) vào Download/Word */
+function savePdfFile() {
+  const base = savedFileName ? savedFileName.replace(/\.[^.]+$/, '') : 'Document1';
+  const input = prompt('Đặt tên file PDF:', base + '.pdf');
+  if (!input) return;
+  const name = /\.pdf$/i.test(input) ? input : input + '.pdf';
+  if (window.AndroidBridge && AndroidBridge.savePdf) {
+    applyPrintPageStyle();
+    closeBackstage();
+    setTimeout(() => AndroidBridge.savePdf(name, pageState.size, pageState.orientation), 300);
+  } else {
+    doPrint();
+  }
+}
 document.getElementById('bsPrintBtn').addEventListener('click', doPrint);
-document.getElementById('bsExportPdf').addEventListener('click', doPrint);
 
 /* Phím tắt Ctrl+S -> lưu nhanh (lần đầu sẽ hỏi vị trí, sau đó lưu thẳng) */
 document.addEventListener('keydown', (e) => {
@@ -5402,6 +5347,13 @@ document.getElementById('tabsBar').addEventListener('click', (e) => {
 });
 window.addEventListener('resize', syncInkSvgViewBox);
 setTimeout(syncInkSvgViewBox, 500);
+
+/* Nút ✕ trên thanh tiêu đề: lưu rồi về màn hình chính Android */
+document.getElementById('btnHomeAndroid').addEventListener('click', () => {
+  try { saveNow(); } catch (e) {}
+  if (window.AndroidBridge && AndroidBridge.goHome) AndroidBridge.goHome();
+  else window.close();
+});
 </script>
 </body>
 </html>
