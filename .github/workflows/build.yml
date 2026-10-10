@@ -1,0 +1,32 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Tải thư viện JS/CSS về dùng offline
+        run: |
+          A=app/src/main/assets/lib
+          mkdir -p $A/fa/css $A/fa/webfonts
+          B=https://cdnjs.cloudflare.com/ajax/libs
+          curl -fsSL $B/font-awesome/6.5.1/css/all.min.css -o $A/fa/css/all.min.css
+          for f in fa-solid-900 fa-regular-400 fa-brands-400; do
+            curl -fsSL $B/font-awesome/6.5.1/webfonts/$f.woff2 -o $A/fa/webfonts/$f.woff2
+          done
+          curl -fsSL $B/mammoth/1.6.0/mammoth.browser.min.js -o $A/mammoth.browser.min.js
+          curl -fsSL $B/jszip/3.10.1/jszip.min.js -o $A/jszip.min.js
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordClone-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
