@@ -287,8 +287,8 @@ class MainActivity : Activity() {
             allowFileAccess = true
             useWideViewPort = true
             loadWithOverviewMode = true
-            setSupportZoom(false)
-            builtInZoomControls = false
+            setSupportZoom(true)
+            builtInZoomControls = true
             displayZoomControls = false
             mediaPlaybackRequiresUserGesture = false
         }

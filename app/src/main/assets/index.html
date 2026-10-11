@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1100, initial-scale=1, user-scalable=no">
+<meta name="viewport" content="width=1100, initial-scale=1, minimum-scale=0.3, maximum-scale=5, user-scalable=yes">
 <script>
 /* ---- Shim cho Android WebView ---- */
 (function(){
@@ -567,7 +567,7 @@
   .tabs { overflow-x: auto; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs .tab { white-space: nowrap; flex-shrink: 0; }
-  .workspace { touch-action: pan-x pan-y; }
+  .workspace { touch-action: pan-x pan-y pinch-zoom; }
   .ruler-handle { touch-action: none; }
   .ink-layer.drawing-active, .ink-layer.erasing-active { touch-action: none; }
   .zoom-container { transform-origin: top left; }
@@ -5946,65 +5946,39 @@ function applyZoom() {
 if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(zoomContainer);
 applyZoom();
 (function () {
-  var pinch = null;
-  function dist(e) {
-    var dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-  function midpoint(e) {
-    return { x: (e.touches[0].clientX + e.touches[1].clientX) / 2, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 };
-  }
-  workspaceEl.addEventListener('touchstart', function (e) {
+/* Cuộn & thu phóng TRANG hoàn toàn do WebView/trình duyệt đảm nhiệm (kéo 1 ngón = cuộn, chụm 2 ngón = zoom).
+   Phần dưới đây TÁCH RIÊNG chỉ để chỉnh kích thước ảnh/hình: chỉ chạy khi CẢ HAI ngón cùng đặt lên đúng ảnh đang chọn. */
+  var imgPinch = null;
+  function pdist(t) { var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.sqrt(dx * dx + dy * dy); }
+  function onRect(rc, t, pad) { return t.clientX > rc.left - pad && t.clientX < rc.right + pad && t.clientY > rc.top - pad && t.clientY < rc.bottom + pad; }
+  doc.addEventListener('touchstart', function (e) {
+    imgPinch = null;
     if (e.touches.length !== 2) return;
-    pinch = { d: dist(e), z: zoomLevel, obj: null };
-    var m0 = midpoint(e);
     var o = (typeof selectedObject !== 'undefined') ? selectedObject : null;
-    if (o && doc.contains(o)) {
-      var rc = o.getBoundingClientRect(), pad = 40;
-      var onObj = o.contains(e.target) || e.target === o ||
-        (m0.x > rc.left - pad && m0.x < rc.right + pad && m0.y > rc.top - pad && m0.y < rc.bottom + pad);
-      if (onObj) {
-        pinch.obj = o;
-        pinch.w = o.offsetWidth; pinch.h = o.offsetHeight;
-      }
-    }
-    if (!pinch.obj) {
-      // ghi nhớ điểm nội dung nằm dưới tâm hai ngón để giữ nó đứng yên khi thu phóng
-      var r = zoomSizer.getBoundingClientRect(), s0 = zoomLevel / 100;
-      pinch.cx = (m0.x - r.left) / s0;
-      pinch.cy = (m0.y - r.top) / s0;
+    if (!o || !doc.contains(o)) return;
+    var rc = o.getBoundingClientRect();
+    if (onRect(rc, e.touches[0], 12) && onRect(rc, e.touches[1], 12)) {
+      imgPinch = { d: pdist(e.touches), obj: o, w: o.offsetWidth, h: o.offsetHeight };
     }
   }, { passive: true });
-  workspaceEl.addEventListener('touchmove', function (e) {
-    if (!(pinch && e.touches.length === 2)) return;
-    e.preventDefault();
-    var ratio = dist(e) / pinch.d;
-    if (pinch.obj) {
-      var o = pinch.obj;
-      var nw = Math.max(30, Math.min(2400, Math.round(pinch.w * ratio)));
-      var nh = Math.max(30, Math.round(pinch.h * (nw / pinch.w)));
-      o.style.maxWidth = 'none';
-      o.style.width = nw + 'px';
-      o.style.height = nh + 'px';
-      o.setAttribute('width', nw); o.setAttribute('height', nh);
-      var wi = document.getElementById('picWidthInput'), hi = document.getElementById('picHeightInput');
-      if (wi) wi.value = nw; if (hi) hi.value = nh;
-    } else {
-      var m = midpoint(e);
-      zoomLevel = Math.max(25, Math.min(400, Math.round(pinch.z * ratio)));
-      applyZoom();
-      var r2 = zoomSizer.getBoundingClientRect(), s1 = zoomLevel / 100;
-      // đưa điểm nội dung đã ghi nhớ về đúng dưới tâm hai ngón hiện tại (đồng thời cho phép kéo 2 ngón để di chuyển trang)
-      workspaceEl.scrollLeft += r2.left + pinch.cx * s1 - m.x;
-      workspaceEl.scrollTop += r2.top + pinch.cy * s1 - m.y;
-    }
+  doc.addEventListener('touchmove', function (e) {
+    if (!imgPinch || e.touches.length !== 2) return;
+    if (e.cancelable) e.preventDefault();
+    var o = imgPinch.obj, ratio = pdist(e.touches) / imgPinch.d;
+    var nw = Math.max(30, Math.min(2400, Math.round(imgPinch.w * ratio)));
+    var nh = Math.max(30, Math.round(imgPinch.h * (nw / imgPinch.w)));
+    o.style.maxWidth = 'none';
+    o.style.width = nw + 'px';
+    o.style.height = nh + 'px';
+    o.setAttribute('width', nw); o.setAttribute('height', nh);
+    var wi = document.getElementById('picWidthInput'), hi = document.getElementById('picHeightInput');
+    if (wi) wi.value = nw; if (hi) hi.value = nh;
   }, { passive: false });
-  workspaceEl.addEventListener('touchend', function (e) {
-    if (e.touches.length < 2) {
-      if (pinch && pinch.obj && typeof scheduleSave === 'function') scheduleSave();
-      pinch = null;
-    }
-  }, { passive: true });
+  function endImgPinch(e) {
+    if (imgPinch && e.touches.length < 2) { imgPinch = null; if (typeof scheduleSave === 'function') scheduleSave(); }
+  }
+  doc.addEventListener('touchend', endImgPinch, { passive: true });
+  doc.addEventListener('touchcancel', endImgPinch, { passive: true });
 })();
 
 /* ================= BẢNG TRÊN CẢM ỨNG: nhấn giữ mép trên = chọn CỘT, mép phải = chọn DÒNG ================= */
