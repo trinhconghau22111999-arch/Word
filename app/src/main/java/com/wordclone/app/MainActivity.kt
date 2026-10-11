@@ -6,8 +6,6 @@ import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentUris
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -21,8 +19,6 @@ import android.print.PrintManager
 import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.webkit.*
 import android.widget.EditText
@@ -34,16 +30,11 @@ import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import java.util.Locale
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private val REQ_FILE = 1001
-
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-    private var ttsPending: Pair<String, String>? = null
 
     inner class Bridge {
         @JavascriptInterface
@@ -129,84 +120,6 @@ class MainActivity : Activity() {
                     Toast.makeText(this@MainActivity, "Không mở được liên kết này", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-
-        @JavascriptInterface
-        fun getClipboard(): String {
-            val o = JSONObject()
-            try {
-                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = cm.primaryClip
-                if (clip != null && clip.itemCount > 0) {
-                    val item = clip.getItemAt(0)
-                    o.put("html", item.htmlText ?: "")
-                    o.put("text", item.coerceToText(this@MainActivity)?.toString() ?: "")
-                }
-            } catch (_: Exception) {}
-            return o.toString()
-        }
-
-        @JavascriptInterface
-        fun setClipboard(text: String, html: String) {
-            runOnUiThread {
-                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = if (html.isNotBlank()) ClipData.newHtmlText("Word", text, html) else ClipData.newPlainText("Word", text)
-                cm.setPrimaryClip(clip)
-                Toast.makeText(this@MainActivity, "Đã sao chép", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        @JavascriptInterface
-        fun speak(text: String, lang: String) {
-            runOnUiThread { startSpeaking(text, lang) }
-        }
-
-        @JavascriptInterface
-        fun stopSpeak() {
-            runOnUiThread { tts?.stop(); ttsPending = null }
-        }
-    }
-
-    private fun startSpeaking(text: String, lang: String) {
-        val t = tts
-        if (t == null) {
-            ttsPending = text to lang
-            tts = TextToSpeech(this) { status ->
-                if (status == TextToSpeech.SUCCESS) {
-                    ttsReady = true
-                    tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                        override fun onStart(id: String?) {}
-                        override fun onDone(id: String?) {
-                            if (id == "last") runOnUiThread { web.evaluateJavascript("window.onTtsDone&&onTtsDone()", null) }
-                        }
-                        @Deprecated("Deprecated in Java")
-                        override fun onError(id: String?) {
-                            runOnUiThread { web.evaluateJavascript("window.onTtsDone&&onTtsDone()", null) }
-                        }
-                    })
-                    ttsPending?.let { speakNow(it.first, it.second); ttsPending = null }
-                } else {
-                    Toast.makeText(this, "Thiết bị không có công cụ đọc văn bản (Text-to-speech)", Toast.LENGTH_LONG).show()
-                    web.evaluateJavascript("window.onTtsDone&&onTtsDone()", null)
-                }
-            }
-        } else if (ttsReady) {
-            speakNow(text, lang)
-        } else {
-            ttsPending = text to lang
-        }
-    }
-
-    private fun speakNow(text: String, lang: String) {
-        val t = tts ?: return
-        val res = t.setLanguage(Locale.forLanguageTag(lang))
-        if (res == TextToSpeech.LANG_MISSING_DATA || res == TextToSpeech.LANG_NOT_SUPPORTED) {
-            Toast.makeText(this, "Máy chưa có giọng đọc cho ngôn ngữ này, dùng giọng mặc định", Toast.LENGTH_LONG).show()
-        }
-        t.stop()
-        val chunks = text.chunked(3500)
-        chunks.forEachIndexed { i, c ->
-            t.speak(c, TextToSpeech.QUEUE_ADD, null, if (i == chunks.size - 1) "last" else "p$i")
         }
     }
 
@@ -442,10 +355,5 @@ class MainActivity : Activity() {
             "(function(){var g=document.getElementById('genericDialog');if(g){g.remove();return 1;}" +
             "var b=document.getElementById('backstage');if(b&&!b.hidden){closeBackstage();return 1;}return 0;})()"
         ) { r -> if (r != "1") finish() }
-    }
-
-    override fun onDestroy() {
-        tts?.shutdown()
-        super.onDestroy()
     }
 }
