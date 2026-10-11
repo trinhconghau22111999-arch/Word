@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1100, initial-scale=1, user-scalable=yes">
+<meta name="viewport" content="width=1100, initial-scale=1, user-scalable=no">
 <script>
 /* ---- Shim cho Android WebView ---- */
 (function(){
@@ -556,6 +556,41 @@
   .page table { border-collapse: collapse; }
   .page table td { border: 1px solid #999; padding: 4px 6px; min-width: 30px; }
 
+
+  /* ===== BỔ SUNG CHO ANDROID ===== */
+  .ribbon-content { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  .ribbon-content::-webkit-scrollbar { height: 4px; }
+  .ribbon-content::-webkit-scrollbar-thumb { background: #bbb; border-radius: 2px; }
+  .group { flex-shrink: 0; }
+  .tabs { overflow-x: auto; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .tab { white-space: nowrap; flex-shrink: 0; }
+  .workspace { touch-action: pan-x pan-y; }
+  .ruler-handle { touch-action: none; }
+  .ink-layer.drawing-active, .ink-layer.erasing-active { touch-action: none; }
+  .zoom-container { transform-origin: top left; }
+  .grid-picker .cells { grid-template-columns: repeat(8, 24px); grid-template-rows: repeat(8, 24px); }
+  .grid-picker .cell { width: 24px; height: 24px; }
+  .modal-body select, .modal-body input[type=number], .modal-body input[type=range] {
+    width: 100%; padding: 5px 6px; border: 1px solid #ccc; border-radius: 2px; margin-bottom: 8px; font-size: 13px; background: #fff;
+  }
+  .dlg-list-item { padding: 8px 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 12px; color: #333; }
+  .dlg-list-item:hover { background: #e8f0fb; }
+  .color-palette {
+    position: fixed; z-index: 500; background: #fff; border: 1px solid #b9b9b9; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    border-radius: 3px; padding: 8px; width: 238px;
+  }
+  .color-palette .pal-grid { display: grid; grid-template-columns: repeat(10, 20px); gap: 2px; }
+  .color-palette .pal-cell { width: 20px; height: 20px; border: 1px solid #ccc; cursor: pointer; }
+  .color-palette .pal-cell:hover { outline: 2px solid #2b579a; }
+  .color-palette .pal-btn { margin-top: 6px; padding: 6px 8px; font-size: 12px; cursor: pointer; border: 1px solid #ddd; border-radius: 2px; background: #f7f7f7; }
+  .color-palette .pal-btn:hover { background: #e8f0fb; }
+  @media print {
+    #zoomSizer { width: auto !important; height: auto !important; }
+    .zoom-container { transform: none !important; }
+    .color-palette, .dd-menu, .grid-picker { display: none !important; }
+  }
+
   /* ---------- STATUS BAR ---------- */
   .statusbar {
     background: #2b579a; color: #fff; font-size: 12px;
@@ -614,11 +649,11 @@
       <div class="group">
         <div class="rows">
           <div class="col">
-            <button class="rbtn big" data-cmd="paste" title="Dán (Ctrl+V)"><i class="fa-solid fa-paste"></i><span class="txt">Dán</span></button>
+            <button class="rbtn big" data-clip="paste" title="Dán (Ctrl+V)"><i class="fa-solid fa-paste"></i><span class="txt">Dán</span></button>
           </div>
           <div class="col">
-            <button class="rbtn small" data-cmd="cut" title="Cắt (Ctrl+X)"><i class="fa-solid fa-scissors"></i></button>
-            <button class="rbtn small" data-cmd="copy" title="Sao chép (Ctrl+C)"><i class="fa-solid fa-copy"></i></button>
+            <button class="rbtn small" data-clip="cut" title="Cắt (Ctrl+X)"><i class="fa-solid fa-scissors"></i></button>
+            <button class="rbtn small" data-clip="copy" title="Sao chép (Ctrl+C)"><i class="fa-solid fa-copy"></i></button>
             <button class="rbtn small" id="btnFormatPainter" title="Sao chép định dạng (Format Painter)"><i class="fa-solid fa-paintbrush"></i></button>
           </div>
         </div>
@@ -1949,42 +1984,6 @@ document.querySelector('[data-action="multilevel"]').addEventListener('click', (
 
 /* ================= BỔ SUNG TAB HOME: các nút còn thiếu so với Word thật ================= */
 
-/* ---------- Format Painter (sao chép định dạng) ---------- */
-let painterFormat = null;
-document.getElementById('btnFormatPainter').addEventListener('mousedown', e => e.preventDefault());
-document.getElementById('btnFormatPainter').addEventListener('click', () => {
-  const sel = window.getSelection();
-  if (!sel.rangeCount || sel.isCollapsed) { alert('Hãy bôi đen văn bản có định dạng muốn sao chép trước.'); return; }
-  let node = sel.getRangeAt(0).startContainer;
-  let el = node.nodeType === 3 ? node.parentElement : node;
-  const cs = window.getComputedStyle(el);
-  painterFormat = {
-    fontWeight: cs.fontWeight, fontStyle: cs.fontStyle, textDecoration: cs.textDecorationLine,
-    color: cs.color, backgroundColor: cs.backgroundColor, fontFamily: cs.fontFamily, fontSize: cs.fontSize
-  };
-  document.getElementById('btnFormatPainter').classList.add('active');
-  doc.classList.add('painter-active');
-});
-doc.addEventListener('mouseup', () => {
-  if (!painterFormat) return;
-  const sel = window.getSelection();
-  if (!sel.rangeCount || sel.isCollapsed) return;
-  const range = sel.getRangeAt(0);
-  const span = document.createElement('span');
-  Object.assign(span.style, {
-    fontWeight: painterFormat.fontWeight, fontStyle: painterFormat.fontStyle,
-    textDecoration: painterFormat.textDecoration, color: painterFormat.color,
-    backgroundColor: painterFormat.backgroundColor !== 'rgba(0, 0, 0, 0)' ? painterFormat.backgroundColor : '',
-    fontFamily: painterFormat.fontFamily, fontSize: painterFormat.fontSize
-  });
-  span.appendChild(range.extractContents());
-  range.insertNode(span);
-  painterFormat = null;
-  document.getElementById('btnFormatPainter').classList.remove('active');
-  doc.classList.remove('painter-active');
-  scheduleSave();
-});
-
 /* ---------- Change Case ---------- */
 setupDropdown('btnChangeCase', 'changeCaseMenu');
 document.getElementById('changeCaseMenu').addEventListener('click', (e) => {
@@ -2276,21 +2275,18 @@ function sanitizePastedHtml(html) {
   return tmp.innerHTML;
 }
 
-function handlePasteEvent(e) {
-  e.preventDefault();
-  const html = (e.clipboardData || window.clipboardData).getData('text/html');
-  const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+function insertPastedContent(html, text) {
   let insertHtml;
-  if (html) {
-    insertHtml = sanitizePastedHtml(html);
-  } else {
-    insertHtml = text.split('\n').map(line => (line.replace(/</g,'&lt;') || '<br>')).join('<br>');
-  }
-  if (trackChangesOn) {
-    insertHtml = '<ins class="track-ins">' + insertHtml + '</ins>';
-  }
+  if (html) insertHtml = sanitizePastedHtml(html);
+  else insertHtml = String(text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').split('\n').map(line => line || '<br>').join('<br>');
+  if (trackChangesOn) insertHtml = '<ins class="track-ins">' + insertHtml + '</ins>';
   document.execCommand('insertHTML', false, insertHtml);
   scheduleSave();
+}
+function handlePasteEvent(e) {
+  e.preventDefault();
+  const cd = (e.clipboardData || window.clipboardData);
+  insertPastedContent(cd.getData('text/html'), cd.getData('text/plain'));
 }
 doc.addEventListener('paste', handlePasteEvent);
 document.getElementById('pageHeader').addEventListener('paste', handlePasteEvent);
@@ -3240,26 +3236,6 @@ document.getElementById('btnThesaurus').addEventListener('click', () => {
     : 'Không tìm thấy từ đồng nghĩa cho "' + word + '" trong từ điển rút gọn của bản demo này.');
 });
 
-/* ---------- Read Aloud (đọc to bằng giọng đọc trình duyệt) ---------- */
-let readAloudUtterance = null;
-document.getElementById('btnReadAloud').addEventListener('click', () => {
-  const btn = document.getElementById('btnReadAloud');
-  if (!('speechSynthesis' in window)) { alert('Trình duyệt không hỗ trợ đọc to (Speech Synthesis).'); return; }
-  if (window.speechSynthesis.speaking) {
-    window.speechSynthesis.cancel();
-    btn.classList.remove('active');
-    return;
-  }
-  const sel = window.getSelection();
-  const text = (sel && sel.toString().trim()) || doc.innerText || doc.textContent || '';
-  if (!text.trim()) { alert('Không có nội dung để đọc.'); return; }
-  readAloudUtterance = new SpeechSynthesisUtterance(text);
-  readAloudUtterance.lang = 'vi-VN';
-  readAloudUtterance.onend = () => btn.classList.remove('active');
-  btn.classList.add('active');
-  window.speechSynthesis.speak(readAloudUtterance);
-});
-
 /* ---------- Translate (mở Google Translate với văn bản đã chọn) ---------- */
 document.getElementById('btnTranslate').addEventListener('click', () => {
   const sel = window.getSelection();
@@ -4084,14 +4060,14 @@ function renderRuler() {
   leftHandle.className = 'ruler-handle left-handle';
   leftHandle.style.left = leftPx + 'px';
   leftHandle.title = 'Kéo để đổi lề trái';
-  leftHandle.addEventListener('mousedown', (e) => startRulerDrag(e, 'left', wPx));
+  leftHandle.addEventListener('pointerdown', (e) => startRulerDrag(e, 'left', wPx));
   rulerTrack.appendChild(leftHandle);
 
   const rightHandle = document.createElement('div');
   rightHandle.className = 'ruler-handle right-handle';
   rightHandle.style.left = rightBoundaryPx + 'px';
   rightHandle.title = 'Kéo để đổi lề phải';
-  rightHandle.addEventListener('mousedown', (e) => startRulerDrag(e, 'right', wPx));
+  rightHandle.addEventListener('pointerdown', (e) => startRulerDrag(e, 'right', wPx));
   rulerTrack.appendChild(rightHandle);
 }
 
@@ -4101,8 +4077,8 @@ function startRulerDrag(e, side, wPx) {
   rulerDragState = { side, startX: e.clientX, startLeft: m.left, startRight: m.right, v: m.v, wPx };
   document.body.style.userSelect = 'none';
   e.target.classList.add('dragging');
-  document.addEventListener('mousemove', onRulerDragMove);
-  document.addEventListener('mouseup', onRulerDragEnd);
+  document.addEventListener('pointermove', onRulerDragMove);
+  document.addEventListener('pointerup', onRulerDragEnd);
 }
 function onRulerDragMove(e) {
   if (!rulerDragState) return;
@@ -4125,8 +4101,8 @@ function onRulerDragEnd() {
   if (!rulerDragState) return;
   document.body.style.userSelect = '';
   document.querySelectorAll('.ruler-handle.dragging').forEach(h => h.classList.remove('dragging'));
-  document.removeEventListener('mousemove', onRulerDragMove);
-  document.removeEventListener('mouseup', onRulerDragEnd);
+  document.removeEventListener('pointermove', onRulerDragMove);
+  document.removeEventListener('pointerup', onRulerDragEnd);
   rulerDragState = null;
   schedulePagination();
   scheduleSave();
@@ -4558,7 +4534,7 @@ document.getElementById('zoomDialogBtn').addEventListener('click', () => {
 
 /* ---------- VIEW: Window (New Window, Split, Side by Side, Switch Windows) ---------- */
 document.getElementById('btnNewWindow').addEventListener('click', () => {
-  if (typeof window.open === 'function') window.open(window.location.href, '_blank');
+  if (window.AndroidBridge) alert('Trên Android ứng dụng chỉ mở một cửa sổ tài liệu tại một thời điểm.'); else if (typeof window.open === 'function') window.open(window.location.href, '_blank');
 });
 document.getElementById('btnSplitWindow').addEventListener('click', () => {
   alert('Split yêu cầu chỉnh sửa cùng lúc 2 vùng của cùng 1 tài liệu — bản web này chỉ hỗ trợ 1 vùng soạn thảo duy nhất nên chưa mô phỏng được thao tác này.');
@@ -5254,57 +5230,6 @@ function syncInkSvgViewBox() {
   inkSvg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
 }
 
-inkLayer.addEventListener('mousedown', (e) => {
-  if (currentDrawTool === 'pen' || currentDrawTool === 'highlighter') {
-    isDrawing = true;
-    syncInkSvgViewBox();
-    const p = getSvgPoint(e);
-    currentStrokePoints = [p];
-    currentStrokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    currentStrokeEl.setAttribute('stroke', currentDrawColor);
-    currentStrokeEl.setAttribute('stroke-width', currentDrawWidth * (currentDrawTool === 'highlighter' ? 6 : 1));
-    currentStrokeEl.setAttribute('fill', 'none');
-    currentStrokeEl.setAttribute('stroke-linecap', 'round');
-    currentStrokeEl.setAttribute('stroke-linejoin', 'round');
-    if (currentDrawTool === 'highlighter') currentStrokeEl.setAttribute('opacity', '0.45');
-    currentStrokeEl.setAttribute('d', 'M ' + p.x + ' ' + p.y);
-    inkSvg.appendChild(currentStrokeEl);
-  } else if (currentDrawTool === 'eraser') {
-    isDrawing = true;
-    eraseAtPoint(e);
-  }
-});
-inkLayer.addEventListener('mousemove', (e) => {
-  if (!isDrawing) return;
-  if (currentDrawTool === 'pen' || currentDrawTool === 'highlighter') {
-    const p = getSvgPoint(e);
-    currentStrokePoints.push(p);
-    const d = currentStrokePoints.map((pt, i) => (i === 0 ? 'M' : 'L') + ' ' + pt.x + ' ' + pt.y).join(' ');
-    currentStrokeEl.setAttribute('d', d);
-  } else if (currentDrawTool === 'eraser') {
-    eraseAtPoint(e);
-  }
-});
-function stopDrawing() {
-  if (isDrawing && currentDrawTool !== 'eraser') scheduleSave();
-  isDrawing = false;
-  currentStrokeEl = null;
-  currentStrokePoints = [];
-}
-inkLayer.addEventListener('mouseup', stopDrawing);
-inkLayer.addEventListener('mouseleave', stopDrawing);
-
-function eraseAtPoint(e) {
-  const rect = inkSvg.getBoundingClientRect();
-  const x = e.clientX, y = e.clientY;
-  if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
-  const el = document.elementFromPoint(x, y);
-  if (el && (el.tagName === 'path' || el.tagName === 'PATH')) {
-    el.remove();
-    scheduleSave();
-  }
-}
-
 document.getElementById('btnClearInk').addEventListener('click', () => {
   if (!inkSvg.children.length) return;
   if (confirm('Xóa toàn bộ nét vẽ trên trang này?')) {
@@ -5354,6 +5279,667 @@ document.getElementById('btnHomeAndroid').addEventListener('click', () => {
   if (window.AndroidBridge && AndroidBridge.goHome) AndroidBridge.goHome();
   else window.close();
 });
+
+/* =====================================================================
+   BỔ SUNG: SỬA CÁC NÚT CHỨC NĂNG CHO ANDROID (ghi đè các hàm cũ cùng tên)
+   ===================================================================== */
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '.dlg-launcher{width:22px;height:22px;bottom:0;right:2px;font-size:10px;}';
+  document.head.appendChild(st);
+})();
+
+/* ---------- Giữ & khôi phục vùng chọn (bấm ribbon/hộp thoại/select làm mất focus) ---------- */
+var lastDocRange = null;
+document.addEventListener('selectionchange', function () {
+  var s = window.getSelection();
+  if (!s || !s.rangeCount) return;
+  var r = s.getRangeAt(0);
+  if (doc.contains(r.commonAncestorContainer)) lastDocRange = r.cloneRange();
+});
+function getDocRange() {
+  var s = window.getSelection();
+  if (s && s.rangeCount) {
+    var r = s.getRangeAt(0);
+    if (doc.contains(r.commonAncestorContainer)) return r;
+  }
+  return lastDocRange;
+}
+function focusDoc() {
+  var s = window.getSelection();
+  if (s && s.rangeCount) {
+    var c = s.getRangeAt(0).commonAncestorContainer;
+    if (document.getElementById('pageHeader').contains(c) || document.getElementById('pageFooter').contains(c)) return;
+  }
+  if (document.activeElement !== doc) doc.focus();
+  var inside = false;
+  s = window.getSelection();
+  if (s && s.rangeCount) inside = doc.contains(s.getRangeAt(0).commonAncestorContainer);
+  if (!inside && lastDocRange) { s.removeAllRanges(); s.addRange(lastDocRange); }
+}
+function nodeAtSelection() {
+  var r = getDocRange();
+  if (!r) return null;
+  var n = r.startContainer;
+  return n.nodeType === 3 ? n.parentElement : n;
+}
+function currentBlockElement() {
+  var el = nodeAtSelection();
+  while (el && el !== doc && !['P', 'DIV', 'H1', 'H2', 'LI'].includes(el.tagName)) el = el.parentElement;
+  return (el && el !== doc) ? el : null;
+}
+function currentTable() {
+  var el = nodeAtSelection();
+  while (el && el !== doc) { if (el.tagName === 'TABLE') return el; el = el.parentElement; }
+  return null;
+}
+function currentCell() {
+  var el = nodeAtSelection();
+  while (el && el !== doc) { if (el.tagName === 'TD' || el.tagName === 'TH') return el; el = el.parentElement; }
+  return null;
+}
+function isInsideTable() { return !!currentTable(); }
+
+/* Bấm vào ribbon/menu/bảng màu không được làm mất vùng chọn trong văn bản */
+document.addEventListener('mousedown', function (e) {
+  var t = e.target;
+  if (t.closest && t.closest('.ribbon, .dd-menu, .grid-picker, .color-palette, .tell-me-results') &&
+      !t.closest('input, select, textarea')) e.preventDefault();
+}, true);
+
+/* ---------- Menu thả: dùng vị trí fixed để không bị ribbon (có cuộn ngang) cắt mất ---------- */
+function closeAllMenus() {
+  document.querySelectorAll('.dd-menu, .grid-picker').forEach(function (m) { m.hidden = true; });
+}
+function placeMenu(menu, anchor) {
+  menu.hidden = false;
+  menu.style.position = 'fixed';
+  menu.style.zIndex = 450;
+  var r = anchor.getBoundingClientRect();
+  menu.style.maxHeight = Math.max(140, window.innerHeight - r.bottom - 8) + 'px';
+  menu.style.overflowY = 'auto';
+  var w = menu.offsetWidth;
+  menu.style.left = Math.max(4, Math.min(r.left, window.innerWidth - w - 4)) + 'px';
+  menu.style.top = (r.bottom + 2) + 'px';
+}
+function setupDropdown(btnId, menuId) {
+  var btn = document.getElementById(btnId);
+  var menu = document.getElementById(menuId);
+  btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    closeColorPalette();
+    var wasHidden = menu.hidden;
+    closeAllMenus();
+    if (wasHidden) placeMenu(menu, btn);
+  });
+}
+['btnMargins', 'btnOrientation', 'btnSize', 'btnColumns'].forEach(function (id) {
+  /* các dropdown tab Layout được đăng ký bằng bản setupDropdown cũ trước khi ghi đè -> gắn thêm bộ định vị */
+  var b = document.getElementById(id);
+  var menuId = { btnMargins: 'marginsMenu', btnOrientation: 'orientationMenu', btnSize: 'sizeMenu', btnColumns: 'columnsMenu' }[id];
+  b.addEventListener('click', function () { var m = document.getElementById(menuId); if (!m.hidden) placeMenu(m, b); });
+});
+document.getElementById('btnTable').addEventListener('click', function () {
+  var g = document.getElementById('tableGridPicker');
+  if (!g.hidden) placeMenu(g, this);
+});
+document.getElementById('btnInsertMergeField').addEventListener('click', function () {
+  var m = document.getElementById('mergeFieldMenu');
+  if (!m.hidden) placeMenu(m, this);
+});
+
+/* ---------- Bảng chọn màu tự vẽ (input type=color không hiện trong Android WebView) ---------- */
+var colorPalEl = null;
+function closeColorPalette() { if (colorPalEl) { colorPalEl.remove(); colorPalEl = null; } }
+function mixHex(hex, t, toward) {
+  var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  function m(c) { return Math.round(c + (toward - c) * t); }
+  return '#' + [m(r), m(g), m(b)].map(function (v) { return v.toString(16).padStart(2, '0'); }).join('');
+}
+function applyPaletteColor(input, color) {
+  if (color === null) {
+    if (input.id === 'hiliteColorPick') { focusDoc(); document.execCommand('hiliteColor', false, 'transparent'); scheduleSave(); }
+    else if (input.id === 'shadeColorPick') { focusDoc(); document.execCommand('backColor', false, 'transparent'); scheduleSave(); }
+    else if (input.id === 'foreColorPick') { input.value = '#000000'; input.dispatchEvent(new Event('input', { bubbles: true })); }
+    return;
+  }
+  input.value = color;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function showColorPalette(input) {
+  closeAllMenus();
+  closeColorPalette();
+  var gray = ['#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff'];
+  var base = ['#c00000', '#ff0000', '#ffc000', '#ffff00', '#92d050', '#00b050', '#00b0f0', '#0070c0', '#002060', '#7030a0'];
+  var rows = [gray, base];
+  [0.8, 0.6, 0.4].forEach(function (t) { rows.push(base.map(function (c) { return mixHex(c, t, 255); })); });
+  rows.push(base.map(function (c) { return mixHex(c, 0.35, 0); }));
+  var html = '<div class="pal-grid">';
+  rows.forEach(function (row) { row.forEach(function (c) { html += '<div class="pal-cell" data-c="' + c + '" style="background:' + c + '"></div>'; }); });
+  html += '</div>';
+  var noneLabel = { hiliteColorPick: 'Không tô sáng', shadeColorPick: 'Không màu nền', foreColorPick: 'Tự động (đen)' }[input.id];
+  if (noneLabel) html += '<div class="pal-btn" data-none="1">' + noneLabel + '</div>';
+  html += '<div class="pal-btn" data-custom="1">Màu khác... (nhập mã #RRGGBB)</div>';
+  var pal = document.createElement('div');
+  pal.className = 'color-palette';
+  pal.innerHTML = html;
+  document.body.appendChild(pal);
+  var r = input.getBoundingClientRect();
+  var left = Math.max(4, Math.min(r.left, window.innerWidth - pal.offsetWidth - 4));
+  var top = r.bottom + 2;
+  if (top + pal.offsetHeight > window.innerHeight) top = Math.max(4, r.top - pal.offsetHeight - 2);
+  pal.style.left = left + 'px';
+  pal.style.top = top + 'px';
+  pal.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  pal.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var cell = e.target.closest('.pal-cell');
+    if (cell) { applyPaletteColor(input, cell.dataset.c); closeColorPalette(); return; }
+    if (e.target.closest('[data-none]')) { applyPaletteColor(input, null); closeColorPalette(); return; }
+    if (e.target.closest('[data-custom]')) {
+      var v = prompt('Nhập mã màu (VD: #ff8800):', input.value);
+      if (v) {
+        v = v.trim();
+        if (v[0] !== '#') v = '#' + v;
+        if (/^#[0-9a-fA-F]{6}$/.test(v)) { applyPaletteColor(input, v.toLowerCase()); closeColorPalette(); }
+        else alert('Mã màu không hợp lệ. Hãy nhập dạng #RRGGBB.');
+      }
+    }
+  });
+  colorPalEl = pal;
+}
+document.querySelectorAll('input[type=color]').forEach(function (inp) {
+  inp.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  inp.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); showColorPalette(inp); });
+});
+document.addEventListener('click', function (e) {
+  if (colorPalEl && !(e.target.closest && e.target.closest('.color-palette'))) closeColorPalette();
+});
+
+/* ---------- Clipboard: Dán / Cắt / Sao chép ---------- */
+var clipHistory = [];
+function pushClipHistory(text, html) {
+  if (!text) return;
+  clipHistory = clipHistory.filter(function (c) { return c.text !== text; });
+  clipHistory.unshift({ text: text, html: html || '' });
+  clipHistory = clipHistory.slice(0, 12);
+}
+function copySelection(cut) {
+  focusDoc();
+  var r = getDocRange();
+  if (!r || r.collapsed || !r.toString()) { alert('Hãy bôi đen văn bản cần ' + (cut ? 'cắt' : 'sao chép') + '.'); return; }
+  var div = document.createElement('div');
+  div.appendChild(r.cloneContents());
+  var text = r.toString(), html = div.innerHTML;
+  if (window.AndroidBridge && AndroidBridge.setClipboard) AndroidBridge.setClipboard(text, html);
+  else { try { document.execCommand(cut ? 'cut' : 'copy'); } catch (e) {} }
+  pushClipHistory(text, html);
+  if (cut) { document.execCommand('delete'); scheduleSave(); }
+}
+async function pasteClipboard() {
+  focusDoc();
+  var html = '', text = '';
+  if (window.AndroidBridge && AndroidBridge.getClipboard) {
+    try { var o = JSON.parse(AndroidBridge.getClipboard()); html = o.html || ''; text = o.text || ''; } catch (e) {}
+  } else if (navigator.clipboard && navigator.clipboard.readText) {
+    try { text = await navigator.clipboard.readText(); } catch (e) {}
+  }
+  if (!html && !text && clipHistory.length) { html = clipHistory[0].html; text = clipHistory[0].text; }
+  if (!html && !text) { alert('Bộ nhớ tạm đang trống — hãy sao chép hoặc cắt nội dung trước.'); return; }
+  focusDoc();
+  insertPastedContent(html, text);
+}
+document.querySelectorAll('[data-clip]').forEach(function (btn) {
+  btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  btn.addEventListener('click', function () {
+    var k = btn.dataset.clip;
+    if (k === 'paste') pasteClipboard(); else copySelection(k === 'cut');
+  });
+});
+
+/* ---------- Định dạng ký tự dùng chung (Format Painter + hộp thoại Font) ---------- */
+function applyCharFormat(f) {
+  focusDoc();
+  function set(cmd, want) {
+    if (want === undefined) return;
+    var cur = false;
+    try { cur = document.queryCommandState(cmd); } catch (e) {}
+    if (cur !== want) document.execCommand(cmd, false, null);
+  }
+  set('bold', f.bold); set('italic', f.italic); set('underline', f.underline); set('strikeThrough', f.strike);
+  set('subscript', f.sub); set('superscript', f.sup);
+  if (f.color) document.execCommand('foreColor', false, f.color);
+  if (f.bg !== undefined) document.execCommand('hiliteColor', false, f.bg || 'transparent');
+  if (f.font) document.execCommand('fontName', false, f.font);
+  if (f.sizePt) applyFontSize(f.sizePt + 'pt');
+  scheduleSave();
+}
+function stateOf(cmd) { try { return document.queryCommandState(cmd); } catch (e) { return false; } }
+function formatAtCaret() {
+  focusDoc();
+  var el = nodeAtSelection();
+  if (!el) return null;
+  var cs = getComputedStyle(el);
+  var bg = 'transparent', n = el;
+  while (n && n !== doc) {
+    var b = getComputedStyle(n).backgroundColor;
+    if (b && b !== 'rgba(0, 0, 0, 0)' && b !== 'transparent') { bg = b; break; }
+    n = n.parentElement;
+  }
+  return {
+    bold: stateOf('bold'), italic: stateOf('italic'), underline: stateOf('underline'), strike: stateOf('strikeThrough'),
+    sub: stateOf('subscript'), sup: stateOf('superscript'),
+    color: cs.color, bg: bg,
+    font: cs.fontFamily.split(',')[0].replace(/["']/g, '').trim(),
+    sizePt: Math.round(parseFloat(cs.fontSize) * 0.75)
+  };
+}
+
+/* ---------- Format Painter (viết lại: dùng selectionchange để chạy được bằng cảm ứng) ---------- */
+var painterFmt = null, painterSrc = null, painterTimer = null;
+function endPainter() {
+  painterFmt = null; painterSrc = null;
+  clearTimeout(painterTimer);
+  document.getElementById('btnFormatPainter').classList.remove('active');
+  doc.classList.remove('painter-active');
+}
+document.getElementById('btnFormatPainter').addEventListener('mousedown', function (e) { e.preventDefault(); });
+document.getElementById('btnFormatPainter').addEventListener('click', function () {
+  if (painterFmt) { endPainter(); return; }
+  var f = formatAtCaret();
+  if (!f) { alert('Hãy đặt con trỏ hoặc bôi đen văn bản có định dạng muốn sao chép trước.'); return; }
+  var r = getDocRange();
+  painterFmt = f;
+  painterSrc = (r && !r.collapsed) ? r.cloneRange() : null;
+  this.classList.add('active');
+  doc.classList.add('painter-active');
+  showPainterHint();
+});
+function showPainterHint() {
+  var old = document.getElementById('painterHint'); if (old) old.remove();
+  var h = document.createElement('div');
+  h.id = 'painterHint';
+  h.textContent = 'Đã chép định dạng — chạm vào một chữ hoặc bôi đen đoạn cần áp dụng';
+  h.style.cssText = 'position:fixed;left:50%;bottom:48px;transform:translateX(-50%);background:#323232;color:#fff;padding:8px 14px;border-radius:6px;font:13px sans-serif;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.35);';
+  document.body.appendChild(h);
+  setTimeout(function () { if (h.parentNode) h.remove(); }, 3500);
+}
+function applyPainterNow() {
+  if (!painterFmt) return;
+  var f = painterFmt;
+  endPainter();
+  var h = document.getElementById('painterHint'); if (h) h.remove();
+  applyCharFormat(f);
+}
+document.addEventListener('selectionchange', function () {
+  if (!painterFmt) return;
+  var r = getDocRange();
+  if (!r || r.collapsed) return;
+  if (painterSrc && r.compareBoundaryPoints(Range.START_TO_START, painterSrc) === 0 &&
+      r.compareBoundaryPoints(Range.END_TO_END, painterSrc) === 0) return;
+  clearTimeout(painterTimer);
+  painterTimer = setTimeout(applyPainterNow, 450);
+});
+/* Chạm (tap) vào một từ khi đang bật Format Painter -> tự chọn từ đó rồi áp định dạng (tiện hơn trên màn hình cảm ứng) */
+doc.addEventListener('pointerup', function () {
+  if (!painterFmt) return;
+  setTimeout(function () {
+    if (!painterFmt) return;
+    var s = window.getSelection();
+    if (!s || !s.rangeCount || !doc.contains(s.anchorNode)) return;
+    if (s.isCollapsed) {
+      try {
+        s.modify('move', 'backward', 'word');
+        s.modify('extend', 'forward', 'word');
+      } catch (e) { return; }
+      if (s.isCollapsed || !s.toString().trim()) return;
+      clearTimeout(painterTimer);
+      applyPainterNow();
+    }
+  }, 60);
+});
+
+/* ---------- Đồng bộ ô phông/cỡ chữ + nút B/I/U theo vị trí con trỏ ---------- */
+function updateToolbarState() {
+  ['bold', 'italic', 'underline', 'strikeThrough', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList']
+    .forEach(function (cmd) {
+      var btn = document.querySelector('[data-cmd="' + cmd + '"]');
+      if (!btn) return;
+      try { btn.classList.toggle('active', document.queryCommandState(cmd)); } catch (e) {}
+    });
+  var el = nodeAtSelection();
+  if (!el) return;
+  var cs = getComputedStyle(el);
+  var fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim().toLowerCase();
+  var fsel = document.getElementById('fontNameSel');
+  Array.from(fsel.options).forEach(function (o) { if ((o.value || o.text).toLowerCase() === fam) fsel.value = o.value || o.text; });
+  var pt = String(Math.round(parseFloat(cs.fontSize) * 0.75));
+  var ssel = document.getElementById('fontSizeSel');
+  Array.from(ssel.options).forEach(function (o) { if ((o.value || o.text) === pt) ssel.value = pt; });
+}
+var _tbTimer = null;
+document.addEventListener('selectionchange', function () {
+  clearTimeout(_tbTimer);
+  _tbTimer = setTimeout(function () { if (document.activeElement === doc) updateToolbarState(); }, 150);
+});
+
+/* ---------- Hộp thoại chung + các nút mở rộng góc nhóm (Dialog Launcher) ---------- */
+function closeGenericDialog() { var o = document.getElementById('genericDialog'); if (o) o.remove(); }
+function showDialog(title, bodyHtml, okText, onOk) {
+  closeGenericDialog();
+  var ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.id = 'genericDialog';
+  ov.style.zIndex = 350;
+  ov.innerHTML = '<div class="modal-box"><div class="modal-header"><span></span><span class="close-x">&#10005;</span></div>' +
+    '<div class="modal-body" style="max-height:70vh;overflow-y:auto;">' + bodyHtml +
+    '<div class="modal-actions" style="margin-top:10px;">' + (okText ? '<button data-ok="1">' + okText + '</button>' : '') +
+    '<button class="secondary" data-cancel="1">Đóng</button></div></div></div>';
+  ov.querySelector('.modal-header span').textContent = title;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function (e) {
+    if (e.target === ov || e.target.closest('.close-x') || e.target.closest('[data-cancel]')) closeGenericDialog();
+    else if (e.target.closest('[data-ok]')) { if (!onOk || onOk(ov) !== false) closeGenericDialog(); }
+  });
+  return ov;
+}
+function selectOptions(list, cur) {
+  return list.map(function (v) {
+    return '<option' + (String(v).toLowerCase() === String(cur).toLowerCase() ? ' selected' : '') + '>' + v + '</option>';
+  }).join('');
+}
+function chk(id, label, on) {
+  return '<div class="chk-row"><input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + '><label for="' + id + '" style="margin:0;">' + label + '</label></div>';
+}
+
+function openFontDialog() {
+  focusDoc();
+  var f = formatAtCaret() || { font: 'Calibri', sizePt: 12 };
+  var fonts = Array.from(document.getElementById('fontNameSel').options).map(function (o) { return o.value || o.text; });
+  var sizes = Array.from(document.getElementById('fontSizeSel').options).map(function (o) { return o.value || o.text; });
+  var body = '<label>Phông chữ</label><select id="fdFont">' + selectOptions(fonts, f.font) + '</select>' +
+    '<label>Cỡ chữ (pt)</label><select id="fdSize">' + selectOptions(sizes, f.sizePt) + '</select>' +
+    chk('fdBold', 'Đậm', f.bold) + chk('fdItalic', 'Nghiêng', f.italic) + chk('fdUnderline', 'Gạch chân', f.underline) +
+    chk('fdStrike', 'Gạch ngang', f.strike) + chk('fdSub', 'Chỉ số dưới', f.sub) + chk('fdSup', 'Chỉ số trên', f.sup) +
+    '<label>Màu chữ (#RRGGBB, để trống = giữ nguyên)</label><input type="text" id="fdColor" placeholder="#000000">';
+  showDialog('Font', body, 'OK', function (ov) {
+    var col = ov.querySelector('#fdColor').value.trim();
+    if (col && col[0] !== '#') col = '#' + col;
+    if (col && !/^#[0-9a-fA-F]{6}$/.test(col)) { alert('Mã màu không hợp lệ.'); return false; }
+    applyCharFormat({
+      font: ov.querySelector('#fdFont').value, sizePt: parseInt(ov.querySelector('#fdSize').value),
+      bold: ov.querySelector('#fdBold').checked, italic: ov.querySelector('#fdItalic').checked,
+      underline: ov.querySelector('#fdUnderline').checked, strike: ov.querySelector('#fdStrike').checked,
+      sub: ov.querySelector('#fdSub').checked, sup: ov.querySelector('#fdSup').checked,
+      color: col || null
+    });
+  });
+}
+
+function selectedBlocks() {
+  var r = getDocRange();
+  var list = [];
+  if (r) list = Array.from(doc.querySelectorAll('p, h1, h2, li')).filter(function (b) { return r.intersectsNode(b); });
+  if (!list.length) { var b = currentBlockElement(); if (b) list = [b]; }
+  return list;
+}
+function openParagraphDialog() {
+  var blocks = selectedBlocks();
+  if (!blocks.length) { alert('Hãy đặt con trỏ vào đoạn văn trước.'); return; }
+  var b = blocks[0], cs = getComputedStyle(b);
+  var align = cs.textAlign === 'start' ? 'left' : cs.textAlign;
+  var body = '<label>Căn lề</label><select id="pdAlign">' +
+    ['left', 'center', 'right', 'justify'].map(function (a) { return '<option value="' + a + '"' + (a === align ? ' selected' : '') + '>' + { left: 'Trái', center: 'Giữa', right: 'Phải', justify: 'Đều hai bên' }[a] + '</option>'; }).join('') +
+    '</select>' +
+    '<label>Thụt lề trái (cm)</label><input type="number" id="pdLeft" step="0.5" min="0" value="' + (parseFloat(b.style.marginLeft) || 0) + '">' +
+    '<label>Thụt lề phải (cm)</label><input type="number" id="pdRight" step="0.5" min="0" value="' + (parseFloat(b.style.marginRight) || 0) + '">' +
+    '<label>Cách trên đoạn (pt)</label><input type="number" id="pdBefore" step="2" min="0" value="' + (parseFloat(b.style.marginTop) || 0) + '">' +
+    '<label>Cách dưới đoạn (pt)</label><input type="number" id="pdAfter" step="2" min="0" value="' + (parseFloat(b.style.marginBottom) || 8) + '">' +
+    '<label>Giãn dòng</label><select id="pdLine">' + selectOptions(['1', '1.15', '1.5', '2', '2.5', '3'], parseFloat(b.style.lineHeight) || 1.5) + '</select>';
+  showDialog('Paragraph', body, 'OK', function (ov) {
+    blocks.forEach(function (el) {
+      el.style.textAlign = ov.querySelector('#pdAlign').value;
+      el.style.marginLeft = ov.querySelector('#pdLeft').value + 'cm';
+      el.style.marginRight = ov.querySelector('#pdRight').value + 'cm';
+      el.style.marginTop = ov.querySelector('#pdBefore').value + 'pt';
+      el.style.marginBottom = ov.querySelector('#pdAfter').value + 'pt';
+      el.style.lineHeight = ov.querySelector('#pdLine').value;
+    });
+    scheduleSave();
+  });
+}
+
+function openClipboardDialog() {
+  var body = clipHistory.length
+    ? clipHistory.map(function (c, i) {
+        var t = c.text.replace(/\s+/g, ' ');
+        return '<div class="dlg-list-item" data-i="' + i + '"></div>';
+      }).join('')
+    : '<p style="color:#888;">Chưa có mục nào. Dùng nút Cắt/Sao chép để lưu vào đây.</p>';
+  var ov = showDialog('Clipboard', body, clipHistory.length ? 'Xóa tất cả' : null, function () { clipHistory = []; });
+  ov.querySelectorAll('.dlg-list-item').forEach(function (el) {
+    var c = clipHistory[parseInt(el.dataset.i)];
+    el.textContent = c.text.replace(/\s+/g, ' ').slice(0, 80);
+    el.addEventListener('click', function () {
+      closeGenericDialog();
+      focusDoc();
+      insertPastedContent(c.html, c.text);
+    });
+  });
+}
+
+function openStylesDialog() {
+  var ov = showDialog('Styles', '<div id="stylesList"></div>', null, null);
+  var list = ov.querySelector('#stylesList');
+  document.querySelectorAll('#styleGallery .style-swatch').forEach(function (sw) {
+    var d = document.createElement('div');
+    d.className = 'dlg-list-item';
+    d.textContent = sw.title || sw.querySelector('.swatch-label').textContent;
+    d.addEventListener('click', function () { closeGenericDialog(); sw.click(); });
+    list.appendChild(d);
+  });
+}
+
+function openPenDialog() {
+  var body = '<label>Độ dày nét (1–20)</label><input type="range" id="penWidth" min="1" max="20" value="' + currentDrawWidth + '">' +
+    '<label>Màu bút (#RRGGBB)</label><input type="text" id="penColor" value="' + (currentDrawColor.length === 7 ? currentDrawColor : '#000000') + '" style="width:100%;padding:6px;border:1px solid #ccc;">';
+  showDialog('Tùy chọn bút', body, 'OK', function (ov) {
+    var c = ov.querySelector('#penColor').value.trim();
+    if (c && c[0] !== '#') c = '#' + c;
+    if (!/^#[0-9a-fA-F]{6}$/.test(c)) { alert('Mã màu không hợp lệ.'); return false; }
+    currentDrawWidth = parseFloat(ov.querySelector('#penWidth').value);
+    currentDrawColor = c;
+  });
+}
+
+document.querySelectorAll('.dlg-launcher').forEach(function (l) {
+  var grp = l.closest('.group');
+  var lab = grp && grp.querySelector('.label');
+  var name = lab ? lab.textContent.trim() : '';
+  if (name === 'Document Formatting') { l.remove(); return; }
+  l.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  l.addEventListener('click', function () {
+    if (l.id === 'btnPenOptions') openPenDialog();
+    else if (name === 'Clipboard') openClipboardDialog();
+    else if (name === 'Font') openFontDialog();
+    else if (name === 'Paragraph') openParagraphDialog();
+    else if (name === 'Styles') openStylesDialog();
+  });
+});
+
+/* ---------- Tab Draw: vẽ bằng ngón tay/bút (pointer events) ---------- */
+var inkStart = null;
+function nearInk(el, p, tol) {
+  var bb;
+  try { bb = el.getBBox(); } catch (e) { return false; }
+  if (p.x < bb.x - tol || p.x > bb.x + bb.width + tol || p.y < bb.y - tol || p.y > bb.y + bb.height + tol) return false;
+  if (el.tagName.toLowerCase() === 'path' && el.getTotalLength) {
+    var len = el.getTotalLength(), step = Math.max(3, len / 300);
+    for (var l = 0; l <= len; l += step) {
+      var q = el.getPointAtLength(l), dx = q.x - p.x, dy = q.y - p.y;
+      if (dx * dx + dy * dy <= tol * tol) return true;
+    }
+    return false;
+  }
+  return true;
+}
+function eraseAtPoint(e) {
+  var p = getSvgPoint(e), removed = false;
+  Array.from(inkSvg.children).forEach(function (el) {
+    if (nearInk(el, p, 10)) { el.remove(); removed = true; }
+  });
+  if (removed) scheduleSave();
+}
+function stopDrawing() {
+  if (isDrawing && currentDrawTool !== 'eraser') scheduleSave();
+  isDrawing = false;
+  currentStrokeEl = null;
+  currentStrokePoints = [];
+  inkStart = null;
+}
+inkLayer.addEventListener('pointerdown', function (e) {
+  if (currentDrawTool === 'pen' || currentDrawTool === 'highlighter') {
+    e.preventDefault();
+    try { inkLayer.setPointerCapture(e.pointerId); } catch (_) {}
+    isDrawing = true;
+    syncInkSvgViewBox();
+    var p = getSvgPoint(e);
+    inkStart = p;
+    currentStrokePoints = [p];
+    currentStrokeEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    currentStrokeEl.setAttribute('stroke', currentDrawColor);
+    currentStrokeEl.setAttribute('stroke-width', currentDrawWidth * (currentDrawTool === 'highlighter' ? 6 : 1));
+    currentStrokeEl.setAttribute('fill', 'none');
+    currentStrokeEl.setAttribute('stroke-linecap', 'round');
+    currentStrokeEl.setAttribute('stroke-linejoin', 'round');
+    if (currentDrawTool === 'highlighter') currentStrokeEl.setAttribute('opacity', '0.45');
+    currentStrokeEl.setAttribute('d', 'M ' + p.x + ' ' + p.y + ' L ' + p.x + ' ' + p.y);
+    inkSvg.appendChild(currentStrokeEl);
+  } else if (currentDrawTool === 'eraser') {
+    e.preventDefault();
+    try { inkLayer.setPointerCapture(e.pointerId); } catch (_) {}
+    isDrawing = true;
+    syncInkSvgViewBox();
+    eraseAtPoint(e);
+  }
+});
+inkLayer.addEventListener('pointermove', function (e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  if (currentDrawTool === 'pen' || currentDrawTool === 'highlighter') {
+    var p = getSvgPoint(e);
+    if (document.getElementById('chkDrawRuler').checked) {
+      currentStrokeEl.setAttribute('d', 'M ' + inkStart.x + ' ' + inkStart.y + ' L ' + p.x + ' ' + p.y);
+    } else {
+      currentStrokeEl.setAttribute('d', currentStrokeEl.getAttribute('d') + ' L ' + p.x + ' ' + p.y);
+    }
+  } else if (currentDrawTool === 'eraser') {
+    eraseAtPoint(e);
+  }
+});
+['pointerup', 'pointercancel'].forEach(function (ev) { inkLayer.addEventListener(ev, stopDrawing); });
+
+/* ---------- Read Aloud: dùng giọng đọc (TextToSpeech) của Android ---------- */
+var readingAloud = false;
+window.onTtsDone = function () {
+  readingAloud = false;
+  document.getElementById('btnReadAloud').classList.remove('active');
+};
+document.getElementById('btnReadAloud').addEventListener('click', function () {
+  if (readingAloud) {
+    if (window.AndroidBridge && AndroidBridge.stopSpeak) AndroidBridge.stopSpeak();
+    else if (window.speechSynthesis) speechSynthesis.cancel();
+    window.onTtsDone();
+    return;
+  }
+  var r = getDocRange();
+  var text = (r && !r.collapsed) ? r.toString() : (doc.innerText || doc.textContent || '');
+  if (!text.trim()) { alert('Không có nội dung để đọc.'); return; }
+  readingAloud = true;
+  this.classList.add('active');
+  if (window.AndroidBridge && AndroidBridge.speak) AndroidBridge.speak(text, doc.lang || 'vi-VN');
+  else if ('speechSynthesis' in window) {
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'vi-VN';
+    u.onend = window.onTtsDone;
+    speechSynthesis.speak(u);
+  } else { alert('Thiết bị không hỗ trợ đọc to.'); window.onTtsDone(); }
+});
+
+/* ---------- Track Changes khi gõ bằng bàn phím điện thoại (IME/composition) ---------- */
+doc.addEventListener('compositionend', function (e) {
+  if (!trackChangesOn || !e.data) return;
+  var s = window.getSelection();
+  if (!s.rangeCount || !s.isCollapsed) return;
+  var r = s.getRangeAt(0), n = r.startContainer, end = r.startOffset, len = e.data.length;
+  if (n.nodeType !== 3 || end < len) return;
+  if (n.parentElement && n.parentElement.closest('ins.track-ins')) return;
+  var rr = document.createRange();
+  rr.setStart(n, end - len);
+  rr.setEnd(n, end);
+  var ins = document.createElement('ins');
+  ins.className = 'track-ins';
+  rr.surroundContents(ins);
+  var after = document.createRange();
+  after.setStartAfter(ins);
+  after.collapse(true);
+  s.removeAllRanges();
+  s.addRange(after);
+  scheduleSave();
+});
+
+/* ---------- Comment: bấm vào đoạn có ghi chú để xem nội dung (điện thoại không có tooltip hover) ---------- */
+doc.addEventListener('click', function (e) {
+  var c = e.target.closest && e.target.closest('.comment-mark');
+  if (c && c.title) alert(c.title);
+});
+
+/* ---------- Zoom: co giãn đúng kích thước cuộn + pinch bằng 2 ngón ---------- */
+var zoomSizer = null;
+(function () {
+  var zc = document.getElementById('zoomContainer');
+  zoomSizer = document.createElement('div');
+  zoomSizer.id = 'zoomSizer';
+  zc.parentNode.insertBefore(zoomSizer, zc);
+  zoomSizer.appendChild(zc);
+  zc.style.width = 'max-content';
+})();
+function applyZoom() {
+  var s = zoomLevel / 100;
+  zoomContainer.style.transform = s === 1 ? '' : 'scale(' + s + ')';
+  if (zoomSizer) {
+    zoomSizer.style.width = (zoomContainer.offsetWidth * s) + 'px';
+    zoomSizer.style.height = (zoomContainer.offsetHeight * s) + 'px';
+  }
+  zoomPct.textContent = zoomLevel + '%';
+  zoomSlider.value = zoomLevel;
+}
+if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(zoomContainer);
+applyZoom();
+(function () {
+  var pinch = null;
+  function dist(e) {
+    var dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  workspaceEl.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) pinch = { d: dist(e), z: zoomLevel };
+  }, { passive: true });
+  workspaceEl.addEventListener('touchmove', function (e) {
+    if (pinch && e.touches.length === 2) {
+      e.preventDefault();
+      zoomLevel = Math.max(50, Math.min(200, Math.round(pinch.z * dist(e) / pinch.d)));
+      applyZoom();
+    }
+  }, { passive: false });
+  workspaceEl.addEventListener('touchend', function (e) { if (e.touches.length < 2) pinch = null; }, { passive: true });
+})();
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { closeColorPalette(); closeGenericDialog(); closeAllMenus(); }
+});
+
 </script>
 </body>
 </html>
