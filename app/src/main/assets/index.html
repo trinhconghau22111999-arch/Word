@@ -507,6 +507,7 @@
   }
   .grid-picker .cell { width: 16px; height: 16px; border: 1px solid #cfcfcf; background: #fafafa; }
   .grid-picker .cell.on { background: #2b579a; border-color: #1e3f70; }
+  @media (pointer: coarse) { .grid-picker .cells { grid-template-columns: repeat(8, 32px) !important; grid-template-rows: repeat(8, 32px) !important; } .grid-picker .cell { width: 32px !important; height: 32px !important; } .grid-picker .label-size { font-size: 14px; } }
   .grid-picker .label-size { font-size: 11px; color: #444; margin-top: 6px; text-align: center; }
 
   /* Header / Footer areas inside page */
@@ -2321,7 +2322,7 @@ function buildGrid() {
     const cell = e.target.closest('.cell');
     if (!cell) return;
     const rr = parseInt(cell.dataset.r), cc = parseInt(cell.dataset.c);
-    label.textContent = cc + ' x ' + rr + ' Bảng';
+    label.textContent = rr + ' hàng x ' + cc + ' cột';
     cellsWrap.querySelectorAll('.cell').forEach(c2 => {
       c2.classList.toggle('on', parseInt(c2.dataset.r) <= rr && parseInt(c2.dataset.c) <= cc);
     });
@@ -2332,6 +2333,32 @@ function buildGrid() {
     insertTable(parseInt(cell.dataset.r), parseInt(cell.dataset.c));
     gridPicker.hidden = true;
   });
+  /* Cảm ứng: đặt/kéo ngón tay để tô sáng số hàng x cột, nhấc tay để chèn bảng */
+  let touchCell = null;
+  function touchHighlight(e) {
+    const t = e.touches[0] || e.changedTouches[0];
+    if (!t) return;
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const cell = el && el.closest ? el.closest('.cell') : null;
+    if (!cell || !cellsWrap.contains(cell)) return;
+    touchCell = cell;
+    const rr = parseInt(cell.dataset.r), cc = parseInt(cell.dataset.c);
+    label.textContent = rr + ' hàng x ' + cc + ' cột';
+    cellsWrap.querySelectorAll('.cell').forEach(c2 => {
+      c2.classList.toggle('on', parseInt(c2.dataset.r) <= rr && parseInt(c2.dataset.c) <= cc);
+    });
+  }
+  cellsWrap.addEventListener('touchstart', (e) => { e.preventDefault(); touchCell = null; touchHighlight(e); }, { passive: false });
+  cellsWrap.addEventListener('touchmove', (e) => { e.preventDefault(); touchHighlight(e); }, { passive: false });
+  cellsWrap.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (touchCell) {
+      const r = parseInt(touchCell.dataset.r), c = parseInt(touchCell.dataset.c);
+      touchCell = null;
+      gridPicker.hidden = true;
+      insertTable(r, c);
+    }
+  }, { passive: false });
   gridBuilt = true;
 }
 btnTable.addEventListener('mousedown', e => e.preventDefault());
@@ -5923,17 +5950,211 @@ applyZoom();
     var dx = e.touches[0].clientX - e.touches[1].clientX, dy = e.touches[0].clientY - e.touches[1].clientY;
     return Math.sqrt(dx * dx + dy * dy);
   }
+  function midpoint(e) {
+    return { x: (e.touches[0].clientX + e.touches[1].clientX) / 2, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 };
+  }
   workspaceEl.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 2) pinch = { d: dist(e), z: zoomLevel };
+    if (e.touches.length !== 2) return;
+    pinch = { d: dist(e), z: zoomLevel, obj: null };
+    var o = (typeof selectedObject !== 'undefined') ? selectedObject : null;
+    if (o && doc.contains(o)) {
+      var rc = o.getBoundingClientRect(), m = midpoint(e), pad = 60;
+      var onObj = e.target === o || o.contains(e.target) ||
+        (m.x > rc.left - pad && m.x < rc.right + pad && m.y > rc.top - pad && m.y < rc.bottom + pad);
+      if (onObj) {
+        pinch.obj = o;
+        pinch.w = o.offsetWidth; pinch.h = o.offsetHeight;
+        pinch.free = o.classList.contains('shape-el') || o.classList.contains('textbox-el');
+      }
+    }
   }, { passive: true });
   workspaceEl.addEventListener('touchmove', function (e) {
-    if (pinch && e.touches.length === 2) {
-      e.preventDefault();
-      zoomLevel = Math.max(50, Math.min(200, Math.round(pinch.z * dist(e) / pinch.d)));
+    if (!(pinch && e.touches.length === 2)) return;
+    e.preventDefault();
+    var ratio = dist(e) / pinch.d;
+    if (pinch.obj) {
+      var o = pinch.obj;
+      var nw = Math.max(30, Math.min(2400, Math.round(pinch.w * ratio)));
+      var nh = Math.max(30, Math.round(pinch.h * (nw / pinch.w)));
+      o.style.maxWidth = 'none';
+      o.style.width = nw + 'px';
+      o.style.height = nh + 'px';
+      o.setAttribute('width', nw); o.setAttribute('height', nh);
+      var wi = document.getElementById('picWidthInput'), hi = document.getElementById('picHeightInput');
+      if (wi) wi.value = nw; if (hi) hi.value = nh;
+    } else {
+      zoomLevel = Math.max(50, Math.min(200, Math.round(pinch.z * ratio)));
       applyZoom();
     }
   }, { passive: false });
-  workspaceEl.addEventListener('touchend', function (e) { if (e.touches.length < 2) pinch = null; }, { passive: true });
+  workspaceEl.addEventListener('touchend', function (e) {
+    if (e.touches.length < 2) {
+      if (pinch && pinch.obj && typeof scheduleSave === 'function') scheduleSave();
+      pinch = null;
+    }
+  }, { passive: true });
+})();
+
+/* ================= BẢNG TRÊN CẢM ỨNG: nhấn giữ mép trên = chọn CỘT, mép phải = chọn DÒNG ================= */
+(function () {
+  var holdTimer = null, startPt = null, holdTable = null, overlay = null, bar = null, cur = null, longDone = false;
+  var EDGE = 30; // vùng mép (px màn hình)
+  function clearSel() {
+    if (overlay) { overlay.remove(); overlay = null; }
+    if (bar) { bar.remove(); bar = null; }
+    cur = null;
+  }
+  function tableAt(x, y) {
+    var el = document.elementFromPoint(x, y);
+    var t = null;
+    if (el && el.closest) t = el.closest('table');
+    if (t && doc.contains(t)) return t;
+    // chạm ngay sát mép (ngoài bảng vài px)
+    var tables = doc.querySelectorAll('table');
+    for (var i = 0; i < tables.length; i++) {
+      var r = tables[i].getBoundingClientRect();
+      if (x >= r.left - 14 && x <= r.right + 22 && y >= r.top - 22 && y <= r.bottom + 14) return tables[i];
+    }
+    return null;
+  }
+  function hitTest(t, x, y) {
+    var r = t.getBoundingClientRect();
+    var rows = t.rows; if (!rows.length) return null;
+    var first = rows[0];
+    var inTop = y >= r.top - 22 && y <= r.top + EDGE && x >= r.left - 6 && x <= r.right + 6;
+    var inRight = x >= r.right - EDGE && x <= r.right + 22 && y >= r.top && y <= r.bottom;
+    if (inTop) {
+      for (var c = 0; c < first.cells.length; c++) {
+        var cr = first.cells[c].getBoundingClientRect();
+        if (x >= cr.left && x <= cr.right) return { type: 'col', index: c };
+      }
+      return { type: 'col', index: x < r.left ? 0 : first.cells.length - 1 };
+    }
+    if (inRight) {
+      for (var i = 0; i < rows.length; i++) {
+        var rr = rows[i].getBoundingClientRect();
+        if (y >= rr.top && y <= rr.bottom) return { type: 'row', index: i };
+      }
+    }
+    return null;
+  }
+  function selRect(t, sel) {
+    var rect;
+    if (sel.type === 'row') rect = t.rows[sel.index].getBoundingClientRect();
+    else {
+      var l = Infinity, tp = Infinity, rt = -Infinity, bt = -Infinity;
+      Array.prototype.forEach.call(t.rows, function (row) {
+        var c = row.cells[sel.index]; if (!c) return;
+        var cr = c.getBoundingClientRect();
+        l = Math.min(l, cr.left); tp = Math.min(tp, cr.top); rt = Math.max(rt, cr.right); bt = Math.max(bt, cr.bottom);
+      });
+      rect = { left: l, top: tp, right: rt, bottom: bt, width: rt - l, height: bt - tp };
+    }
+    return rect;
+  }
+  function showSel(t, sel) {
+    clearSel();
+    cur = { table: t, type: sel.type, index: sel.index };
+    var rc = selRect(t, sel);
+    overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;pointer-events:none;z-index:9998;background:rgba(43,87,154,.28);border:2px solid #2b579a;left:' + rc.left + 'px;top:' + rc.top + 'px;width:' + rc.width + 'px;height:' + rc.height + 'px;';
+    document.body.appendChild(overlay);
+    var word = sel.type === 'row' ? 'dòng' : 'cột';
+    bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:99999;background:#2b2b2b;color:#fff;border-radius:10px;padding:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:96vw;box-shadow:0 3px 12px rgba(0,0,0,.45);font:14px sans-serif;align-items:center;';
+    var lab = document.createElement('span');
+    lab.textContent = 'Đã chọn ' + word + ' ' + (sel.index + 1);
+    lab.style.cssText = 'padding:0 6px;opacity:.85';
+    bar.appendChild(lab);
+    function btn(text, color, fn) {
+      var b = document.createElement('button');
+      b.textContent = text;
+      b.style.cssText = 'border:0;border-radius:6px;padding:8px 12px;font:14px sans-serif;color:#fff;background:' + color + ';';
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
+      bar.appendChild(b);
+    }
+    btn('Xóa ' + word, '#c62828', function () { deleteSel(); });
+    btn(sel.type === 'row' ? 'Chèn trên' : 'Chèn trái', '#2b579a', function () { insertSel(true); });
+    btn(sel.type === 'row' ? 'Chèn dưới' : 'Chèn phải', '#2b579a', function () { insertSel(false); });
+    btn('Xóa bảng', '#8e2424', function () { var t2 = cur.table; clearSel(); t2.remove(); scheduleSave(); });
+    btn('Bỏ chọn', '#555', clearSel);
+    document.body.appendChild(bar);
+  }
+  function deleteSel() {
+    if (!cur) return;
+    var t = cur.table, i = cur.index;
+    if (cur.type === 'row') {
+      if (t.rows.length <= 1) t.remove(); else t.deleteRow(i);
+    } else {
+      var rows = Array.prototype.slice.call(t.rows);
+      if (rows[0].cells.length <= 1) t.remove();
+      else rows.forEach(function (r) { if (r.cells[i]) r.deleteCell(i); });
+    }
+    clearSel(); scheduleSave();
+  }
+  function insertSel(before) {
+    if (!cur) return;
+    var t = cur.table, i = cur.index, sel = { type: cur.type, index: i };
+    if (cur.type === 'row') {
+      var row = t.rows[i], nr = row.cloneNode(true);
+      Array.prototype.forEach.call(nr.cells, function (c) { c.innerHTML = '&nbsp;'; });
+      row.parentNode.insertBefore(nr, before ? row : row.nextSibling);
+      if (before) sel.index = i + 1;
+    } else {
+      Array.prototype.forEach.call(t.rows, function (r) {
+        var ref = r.cells[i]; if (!ref) return;
+        var nc = document.createElement(ref.tagName); nc.innerHTML = '&nbsp;';
+        r.insertBefore(nc, before ? ref : ref.nextSibling);
+      });
+      if (before) sel.index = i + 1;
+    }
+    scheduleSave();
+    showSel(t, sel);
+  }
+  function cancelHold() { clearTimeout(holdTimer); holdTimer = null; }
+  doc.addEventListener('touchstart', function (e) {
+    longDone = false;
+    if (e.touches.length !== 1) { cancelHold(); return; }
+    var tc = e.touches[0];
+    var t = tableAt(tc.clientX, tc.clientY);
+    if (!t) { if (cur) clearSel(); return; }
+    var hit = hitTest(t, tc.clientX, tc.clientY);
+    if (!hit) { if (cur && !(bar && bar.contains(e.target))) clearSel(); return; }
+    startPt = { x: tc.clientX, y: tc.clientY };
+    holdTable = t;
+    doc.style.webkitUserSelect = 'none'; doc.style.userSelect = 'none';
+    cancelHold();
+    holdTimer = setTimeout(function () {
+      longDone = true;
+      try { window.getSelection().removeAllRanges(); } catch (er) {}
+      if (navigator.vibrate) try { navigator.vibrate(25); } catch (er) {}
+      showSel(holdTable, hit);
+    }, 420);
+  }, { passive: true });
+  doc.addEventListener('touchmove', function (e) {
+    if (!holdTimer || !startPt) return;
+    var tc = e.touches[0];
+    if (Math.abs(tc.clientX - startPt.x) > 12 || Math.abs(tc.clientY - startPt.y) > 12) {
+      cancelHold(); doc.style.webkitUserSelect = ''; doc.style.userSelect = '';
+    }
+  }, { passive: true });
+  function endTouch(e) {
+    cancelHold();
+    doc.style.webkitUserSelect = ''; doc.style.userSelect = '';
+    if (longDone && e.cancelable) e.preventDefault();
+  }
+  doc.addEventListener('touchend', endTouch, { passive: false });
+  doc.addEventListener('touchcancel', endTouch, { passive: false });
+  doc.addEventListener('contextmenu', function (e) { if (longDone) e.preventDefault(); });
+  // Chuột (máy tính): bấm chuột phải vào mép trên/phải bảng cũng chọn được
+  doc.addEventListener('contextmenu', function (e) {
+    var t = tableAt(e.clientX, e.clientY); if (!t) return;
+    var hit = hitTest(t, e.clientX, e.clientY);
+    if (hit) { e.preventDefault(); showSel(t, hit); }
+  });
+  window.addEventListener('scroll', function () { if (cur) { try { showSel(cur.table, { type: cur.type, index: cur.index }); } catch (e) { clearSel(); } } }, true);
+  doc.addEventListener('input', function () { if (cur) clearSel(); });
 })();
 
 document.addEventListener('keydown', function (e) {
