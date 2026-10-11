@@ -268,6 +268,7 @@
 
   /* ---------- ZOOM ---------- */
   .zoom-container { transform-origin: top center; }
+  #zoomSizer { margin: 0 auto; flex: none; }
   .zoom-controls { display: flex; align-items: center; gap: 4px; }
   .zoom-controls button {
     background: transparent; border: none; color: #fff; cursor: pointer; width: 18px; font-size: 12px;
@@ -536,8 +537,8 @@
 
   /* ---------- WORKSPACE ---------- */
   .workspace {
-    flex: 1; overflow: auto; background: #e6e6e6;
-    display: flex; flex-direction: column; align-items: center; padding: 24px 0 60px;
+    flex: 1; overflow: auto; background: #e6e6e6; -webkit-overflow-scrolling: touch;
+    display: flex; flex-direction: column; align-items: flex-start; padding: 24px 0 60px;
   }
   .page-wrap {
     background: #fff;
@@ -1704,7 +1705,7 @@
       </div>
       <div class="zoom-controls">
         <button id="zoomOut" title="Thu nhỏ"><i class="fa-solid fa-minus"></i></button>
-        <input type="range" id="zoomSlider" min="50" max="200" step="10" value="100">
+        <input type="range" id="zoomSlider" min="25" max="400" step="10" value="100">
         <button id="zoomIn" title="Phóng to"><i class="fa-solid fa-plus"></i></button>
         <span class="zoom-pct" id="zoomPct">100%</span>
       </div>
@@ -4145,8 +4146,8 @@ function applyZoom() {
   zoomPct.textContent = zoomLevel + '%';
   zoomSlider.value = zoomLevel;
 }
-document.getElementById('zoomIn').addEventListener('click', () => { zoomLevel = Math.min(200, zoomLevel + 10); applyZoom(); });
-document.getElementById('zoomOut').addEventListener('click', () => { zoomLevel = Math.max(50, zoomLevel - 10); applyZoom(); });
+document.getElementById('zoomIn').addEventListener('click', () => { zoomLevel = Math.min(400, zoomLevel + 10); applyZoom(); });
+document.getElementById('zoomOut').addEventListener('click', () => { zoomLevel = Math.max(25, zoomLevel - 10); applyZoom(); });
 zoomSlider.addEventListener('input', (e) => { zoomLevel = parseInt(e.target.value); applyZoom(); });
 
 /* ---------- PHÂN TRANG ẢO (mô phỏng nhiều trang) ---------- */
@@ -4539,14 +4540,14 @@ document.getElementById('zoomOnePage').addEventListener('click', () => {
   const dims = PAGE_SIZES[pageState.size];
   const wPx = pageState.orientation === 'portrait' ? dims.w : dims.h;
   const availableWidth = workspaceEl.clientWidth - 60;
-  zoomLevel = Math.max(50, Math.min(200, Math.round((availableWidth / wPx) * 100)));
+  zoomLevel = Math.max(25, Math.min(400, Math.round((availableWidth / wPx) * 100)));
   applyZoom();
 });
 document.getElementById('zoomPageWidth').addEventListener('click', () => {
   const dims = PAGE_SIZES[pageState.size];
   const wPx = pageState.orientation === 'portrait' ? dims.w : dims.h;
   const availableWidth = workspaceEl.clientWidth - 20;
-  zoomLevel = Math.max(50, Math.min(200, Math.round((availableWidth / wPx) * 100)));
+  zoomLevel = Math.max(25, Math.min(400, Math.round((availableWidth / wPx) * 100)));
   applyZoom();
 });
 document.getElementById('zoomMultiPage').addEventListener('click', () => {
@@ -4554,9 +4555,9 @@ document.getElementById('zoomMultiPage').addEventListener('click', () => {
   applyZoom();
 });
 document.getElementById('zoomDialogBtn').addEventListener('click', () => {
-  const val = prompt('Nhập mức Zoom tùy chỉnh (50-200%):', zoomLevel);
+  const val = prompt('Nhập mức Zoom tùy chỉnh (25-400%):', zoomLevel);
   const num = parseInt(val);
-  if (!isNaN(num)) { zoomLevel = Math.max(50, Math.min(200, num)); applyZoom(); }
+  if (!isNaN(num)) { zoomLevel = Math.max(25, Math.min(400, num)); applyZoom(); }
 });
 
 /* ---------- VIEW: Window (New Window, Split, Side by Side, Switch Windows) ---------- */
@@ -5956,16 +5957,22 @@ applyZoom();
   workspaceEl.addEventListener('touchstart', function (e) {
     if (e.touches.length !== 2) return;
     pinch = { d: dist(e), z: zoomLevel, obj: null };
+    var m0 = midpoint(e);
     var o = (typeof selectedObject !== 'undefined') ? selectedObject : null;
     if (o && doc.contains(o)) {
-      var rc = o.getBoundingClientRect(), m = midpoint(e), pad = 60;
-      var onObj = e.target === o || o.contains(e.target) ||
-        (m.x > rc.left - pad && m.x < rc.right + pad && m.y > rc.top - pad && m.y < rc.bottom + pad);
+      var rc = o.getBoundingClientRect(), pad = 40;
+      var onObj = o.contains(e.target) || e.target === o ||
+        (m0.x > rc.left - pad && m0.x < rc.right + pad && m0.y > rc.top - pad && m0.y < rc.bottom + pad);
       if (onObj) {
         pinch.obj = o;
         pinch.w = o.offsetWidth; pinch.h = o.offsetHeight;
-        pinch.free = o.classList.contains('shape-el') || o.classList.contains('textbox-el');
       }
+    }
+    if (!pinch.obj) {
+      // ghi nhớ điểm nội dung nằm dưới tâm hai ngón để giữ nó đứng yên khi thu phóng
+      var r = zoomSizer.getBoundingClientRect(), s0 = zoomLevel / 100;
+      pinch.cx = (m0.x - r.left) / s0;
+      pinch.cy = (m0.y - r.top) / s0;
     }
   }, { passive: true });
   workspaceEl.addEventListener('touchmove', function (e) {
@@ -5983,8 +5990,13 @@ applyZoom();
       var wi = document.getElementById('picWidthInput'), hi = document.getElementById('picHeightInput');
       if (wi) wi.value = nw; if (hi) hi.value = nh;
     } else {
-      zoomLevel = Math.max(50, Math.min(200, Math.round(pinch.z * ratio)));
+      var m = midpoint(e);
+      zoomLevel = Math.max(25, Math.min(400, Math.round(pinch.z * ratio)));
       applyZoom();
+      var r2 = zoomSizer.getBoundingClientRect(), s1 = zoomLevel / 100;
+      // đưa điểm nội dung đã ghi nhớ về đúng dưới tâm hai ngón hiện tại (đồng thời cho phép kéo 2 ngón để di chuyển trang)
+      workspaceEl.scrollLeft += r2.left + pinch.cx * s1 - m.x;
+      workspaceEl.scrollTop += r2.top + pinch.cy * s1 - m.y;
     }
   }, { passive: false });
   workspaceEl.addEventListener('touchend', function (e) {
